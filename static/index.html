@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustJob AI • Détection Intelligente de Fausses Offres</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: #eff6ff;
+            --slate-900: #0f172a;
+            --slate-800: #1e293b;
+            --slate-700: #334155;
+            --slate-600: #475569;
+            --slate-500: #64748b;
+            --slate-400: #94a3b8;
+            --slate-200: #e2e8f0;
+            --slate-100: #f1f5f9;
+            --slate-50: #f8fafc;
+            --white: #ffffff;
+            --danger: #dc2626;
+            --danger-bg: #fef2f2;
+            --danger-border: #fecaca;
+            --success: #16a34a;
+            --success-bg: #f0fdf4;
+            --success-border: #bbf7d0;
+            --warning: #d97706;
+            --warning-bg: #fffbeb;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+            --transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            background-color: #f8fafc;
+            color: var(--slate-900);
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* En-tête de navigation */
+        header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--slate-200);
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            transition: var(--transition);
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0.9rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .logo-wrap:hover .logo-icon {
+            transform: scale(1.08) rotate(-4deg);
+        }
+
+        .logo-text {
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: var(--slate-900);
+        }
+
+        .logo-text span {
+            color: var(--primary);
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .badge-model {
+            font-size: 0.78rem;
+            font-weight: 600;
+            background: var(--slate-100);
+            color: var(--slate-600);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--slate-200);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-model::before {
+            content: '';
+            width: 7px;
+            height: 7px;
+            background: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+            70% { transform: scale(1); box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .btn-benchmark {
+            background: white;
+            border: 1px solid var(--slate-200);
+            color: var(--slate-700);
+            padding: 7px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-benchmark:hover {
+            background: var(--slate-50);
+            border-color: var(--slate-300);
+            color: var(--slate-900);
+            transform: translateY(-1px);
+        }
+
+        /* Conteneur principal */
+        main {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 2.5rem 1.5rem 4rem;
+            flex: 1;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            max-width: 720px;
+            margin: 0 auto 2.5rem;
+            animation: fadeInDown 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .hero-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--primary-light);
+            color: var(--primary);
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-bottom: 0.9rem;
+            letter-spacing: 0.02em;
+        }
+
+        .hero h1 {
+            font-size: 2.35rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            color: var(--slate-900);
+            line-height: 1.2;
+            margin-bottom: 0.75rem;
+        }
+
+        .hero p {
+            font-size: 1.05rem;
+            color: var(--slate-500);
+            font-weight: 400;
+        }
+
+        /* Barre d'exemples rapides */
+        .presets-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            animation: fadeIn 0.8s ease;
+        }
+
+        .preset-title {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--slate-500);
+            margin-right: 4px;
+        }
+
+        .preset-btn {
+            background: white;
+            border: 1px solid var(--slate-200);
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--slate-700);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .preset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .preset-btn.fraud:hover {
+            border-color: var(--danger-border);
+            color: var(--danger);
+            background: var(--danger-bg);
+        }
+
+        .preset-btn.legit:hover {
+            border-color: var(--success-border);
+            color: var(--success);
+            background: var(--success-bg);
+        }
+
+        .preset-btn.clear:hover {
+            border-color: var(--slate-300);
+            background: var(--slate-100);
+        }
+
+        /* Grille principale */
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        @media (max-width: 960px) {
+            .workspace-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Carte du Formulaire */
+        .card {
+            background: white;
+            border: 1px solid var(--slate-200);
+            border-radius: var(--radius-lg);
+            padding: 1.75rem;
+            box-shadow: var(--shadow-md);
+            transition: var(--transition);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.9rem;
+            border-bottom: 1px solid var(--slate-100);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--slate-900);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Onglets de mode de saisie */
+        .mode-tabs {
+            display: flex;
+            background: var(--slate-100);
+            padding: 4px;
+            border-radius: var(--radius-sm);
+            gap: 4px;
+        }
+
+        .mode-tab {
+            border: none;
+            background: transparent;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--slate-600);
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .mode-tab.active {
+            background: white;
+            color: var(--slate-900);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Groupes de champs */
+        .form-group {
+            margin-bottom: 1.1rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--slate-700);
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 14px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            color: var(--slate-900);
+            background: var(--white);
+            border: 1px solid var(--slate-200);
+            border-radius: var(--radius-sm);
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 110px;
+            line-height: 1.55;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        /* Cases à cocher modernes / Toggles */
+        .toggles-container {
+            background: var(--slate-50);
+            border: 1px solid var(--slate-200);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+            margin: 1.2rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--slate-700);
+            font-weight: 500;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 38px;
+            height: 22px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--slate-300);
+            transition: 0.3s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(16px);
+        }
+
+        /* Bouton d'action principal */
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-submit:hover {
+            background: linear-gradient(135deg, #1d4ed8, #1e40af);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        /* Spinner animé */
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Carte de Résultat */
+        .results-card {
+            background: white;
+            border: 1px solid var(--slate-200);
+            border-radius: var(--radius-lg);
+            padding: 1.75rem;
+            box-shadow: var(--shadow-md);
+            position: sticky;
+            top: 5rem;
+            animation: fadeIn 0.4s ease;
+        }
+
+        /* État initial / Placeholder */
+        .placeholder-state {
+            text-align: center;
+            padding: 3.5rem 1rem;
+            color: var(--slate-400);
+        }
+
+        .placeholder-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: var(--slate-100);
+            color: var(--slate-400);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.25rem;
+            font-size: 1.8rem;
+            border: 2px dashed var(--slate-200);
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        /* Conteneur de résultats dynamiques */
+        .result-content {
+            display: none;
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Jauge circulaire SVG */
+        .gauge-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--slate-100);
+        }
+
+        .gauge-container {
+            position: relative;
+            width: 104px;
+            height: 104px;
+            flex-shrink: 0;
+        }
+
+        .gauge-svg {
+            transform: rotate(-90deg);
+            width: 104px;
+            height: 104px;
+        }
+
+        .gauge-bg {
+            fill: none;
+            stroke: var(--slate-100);
+            stroke-width: 8;
+        }
+
+        .gauge-progress {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 283;
+            stroke-dashoffset: 283;
+            transition: stroke-dashoffset 1s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.4s ease;
+        }
+
+        .gauge-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .gauge-number {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--slate-900);
+            line-height: 1;
+        }
+
+        .gauge-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--slate-400);
+            margin-top: 2px;
+        }
+
+        .verdict-info {
+            flex: 1;
+        }
+
+        .verdict-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+            animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .verdict-badge.fraud {
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid var(--danger-border);
+            animation: pulse-danger 2s infinite;
+        }
+
+        @keyframes pulse-danger {
+            0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.3); }
+            70% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+        }
+
+        .verdict-badge.legit {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid var(--success-border);
+        }
+
+        .verdict-desc {
+            font-size: 0.82rem;
+            color: var(--slate-600);
+            line-height: 1.45;
+        }
+
+        /* Chips de mots-clés */
+        .risk-chips-section {
+            margin-bottom: 1.25rem;
+        }
+
+        .section-label {
+            font-size: 0.76rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--slate-500);
+            margin-bottom: 8px;
+        }
+
+        .chips-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .chip {
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+            color: #92400e;
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 6px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .chip.clean {
+            background: var(--slate-100);
+            border-color: var(--slate-200);
+            color: var(--slate-600);
+        }
+
+        /* Liste des signaux d'alerte */
+        .checklist {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            margin-bottom: 1.5rem;
+        }
+
+        .check-item {
+            font-size: 0.82rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--slate-700);
+        }
+
+        .check-icon {
+            font-size: 0.95rem;
+        }
+
+        /* Actions du rapport */
+        .actions-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 1.25rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--slate-100);
+        }
+
+        .btn-outline {
+            background: white;
+            border: 1px solid var(--slate-200);
+            padding: 8px;
+            border-radius: var(--radius-sm);
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--slate-700);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: var(--transition);
+        }
+
+        .btn-outline:hover {
+            background: var(--slate-50);
+            border-color: var(--slate-300);
+            color: var(--slate-900);
+        }
+
+        /* Modal Benchmark */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .modal {
+            background: white;
+            border-radius: var(--radius-lg);
+            max-width: 680px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-xl);
+            padding: 1.75rem;
+            animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--slate-900);
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 1.4rem;
+            cursor: pointer;
+            color: var(--slate-400);
+            transition: var(--transition);
+        }
+
+        .btn-close:hover {
+            color: var(--slate-700);
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+            margin: 1.25rem 0;
+            border: 1px solid var(--slate-200);
+            border-radius: var(--radius-sm);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            text-align: left;
+        }
+
+        th {
+            background: var(--slate-50);
+            padding: 10px 14px;
+            font-weight: 700;
+            color: var(--slate-700);
+            border-bottom: 1px solid var(--slate-200);
+        }
+
+        td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--slate-100);
+            color: var(--slate-600);
+        }
+
+        tr.highlight td {
+            background: var(--primary-light);
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            background: var(--slate-900);
+            color: white;
+            padding: 10px 18px;
+            border-radius: var(--radius-sm);
+            font-size: 0.82rem;
+            font-weight: 600;
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Barre de Navigation -->
+    <header>
+        <div class="header-container">
+            <a href="#" class="logo-wrap">
+                <div class="logo-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                </div>
+                <div class="logo-text">TrustJob<span>AI</span></div>
+            </a>
+            <div class="nav-actions">
+                <div class="badge-model">SVM Linéaire (F1: 83.8%)</div>
+                <button class="btn-benchmark" id="openBenchmark">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"/>
+                        <line x1="12" y1="20" x2="12" y2="4"/>
+                        <line x1="6" y1="20" x2="6" y2="14"/>
+                    </svg>
+                    Modèles comparés
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenu Principal -->
+    <main>
+        <!-- Section Hero -->
+        <div class="hero">
+            <div class="hero-tag">NLP & Machine Learning</div>
+            <h1>Détectez instantanément les fausses offres d'emploi</h1>
+            <p>Analysez en quelques secondes le texte, les métadonnées et les signaux de risque d'une annonce pour vous prémunir contre les escroqueries.</p>
+        </div>
+
+        <!-- Presets / Exemples en 1 clic -->
+        <div class="presets-bar">
+            <span class="preset-title">Tester un exemple :</span>
+            <button class="preset-btn fraud" id="loadFraud">
+                🚨 Offre frauduleuse type
+            </button>
+            <button class="preset-btn legit" id="loadLegit">
+                ✅ Offre légitime (Ingénieur)
+            </button>
+            <button class="preset-btn clear" id="clearForm">
+                🗑️ Réinitialiser
+            </button>
+        </div>
+
+        <!-- Espace de Travail -->
+        <div class="workspace-grid">
+            <!-- Formulaire -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                        </svg>
+                        Détails de l'offre d'emploi
+                    </div>
+                    <div class="mode-tabs">
+                        <button class="mode-tab active" id="tabExpress">Mode Express</button>
+                        <button class="mode-tab" id="tabDetails">Champs détaillés</button>
+                    </div>
+                </div>
+
+                <form id="auditForm">
+                    <!-- Mode Express (Texte brut) -->
+                    <div id="expressMode">
+                        <div class="form-group">
+                            <label for="rawText">Collez le contenu intégral de l'annonce</label>
+                            <textarea id="rawText" class="form-control" rows="8" placeholder="Copiez-collez ici le texte complet visible sur LinkedIn, Indeed ou par e-mail (titre, rémunération promise, missions, contact...)"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Mode Détaillé -->
+                    <div id="detailsMode" style="display: none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="inputTitle">Intitulé du poste</label>
+                                <input type="text" id="inputTitle" class="form-control" placeholder="ex: Data Entry, Développeur Python...">
+                            </div>
+                            <div class="form-group">
+                                <label for="inputCompany">Profil entreprise</label>
+                                <input type="text" id="inputCompany" class="form-control" placeholder="ex: Cabinet international...">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="inputLocation">Localisation</label>
+                                <input type="text" id="inputLocation" class="form-control" placeholder="Paris, Télétravail, Lyon...">
+                            </div>
+                            <div class="form-group">
+                                <label for="inputSalary">Salaire proposé</label>
+                                <input type="text" id="inputSalary" class="form-control" placeholder="45k€, 4000€/mois...">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputDesc">Description des missions & responsabilités</label>
+                            <textarea id="inputDesc" class="form-control" rows="3" placeholder="Description complète..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputReq">Exigences & Qualifications</label>
+                            <textarea id="inputReq" class="form-control" rows="2" placeholder="Diplôme, années d'expérience..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Toggles / Paramètres -->
+                    <div class="toggles-container">
+                        <label class="toggle-item">
+                            <span>🏠 Télétravail / Travail à domicile annoncé</span>
+                            <div class="switch">
+                                <input type="checkbox" id="toggleTele">
+                                <span class="slider"></span>
+                            </div>
+                        </label>
+                        <label class="toggle-item">
+                            <span>🏢 Logo et identité vérifiée d'entreprise</span>
+                            <div class="switch">
+                                <input type="checkbox" id="toggleLogo" checked>
+                                <span class="slider"></span>
+                            </div>
+                        </label>
+                        <label class="toggle-item">
+                            <span>❓ Questionnaire d'évaluation préalable inclus</span>
+                            <div class="switch">
+                                <input type="checkbox" id="toggleQuestions" checked>
+                                <span class="slider"></span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Bouton Submit -->
+                    <button type="submit" class="btn-submit" id="submitBtn">
+                        <span class="spinner" id="btnSpinner"></span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" id="btnIcon">
+                            <circle cx="11" cy="11" r="8"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                        <span id="btnText">Analyser la fiabilité de l'offre</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Colonne Résultat -->
+            <div class="results-card">
+                <!-- État Vide -->
+                <div class="placeholder-state" id="emptyState">
+                    <div class="placeholder-icon">🛡️</div>
+                    <h3 style="font-size: 1.05rem; font-weight: 700; color: var(--slate-700); margin-bottom: 6px;">Prêt pour l'audit</h3>
+                    <p style="font-size: 0.85rem; max-width: 280px; margin: 0 auto;">Collez le texte d'une annonce ou chargez un exemple pour lancer l'évaluation en direct.</p>
+                </div>
+
+                <!-- État Résultat -->
+                <div class="result-content" id="resultState">
+                    <div class="gauge-section">
+                        <div class="gauge-container">
+                            <svg class="gauge-svg" viewBox="0 0 100 100">
+                                <circle class="gauge-bg" cx="50" cy="50" r="45"></circle>
+                                <circle class="gauge-progress" id="gaugeCircle" cx="50" cy="50" r="45"></circle>
+                            </svg>
+                            <div class="gauge-text">
+                                <div class="gauge-number" id="riskPercent">0%</div>
+                                <div class="gauge-label">Risque</div>
+                            </div>
+                        </div>
+                        <div class="verdict-info">
+                            <div class="verdict-badge" id="verdictBadge">Analyse</div>
+                            <div class="verdict-desc" id="verdictDesc">Évaluation terminée avec succès.</div>
+                        </div>
+                    </div>
+
+                    <!-- Mots-clés suspects -->
+                    <div class="risk-chips-section">
+                        <div class="section-label">Indicateurs lexicaux détectés</div>
+                        <div class="chips-wrap" id="chipsContainer">
+                            <span class="chip clean">Aucun terme suspect</span>
+                        </div>
+                    </div>
+
+                    <!-- Signaux contextuels -->
+                    <div class="checklist">
+                        <div class="section-label">Contrôles de cohérence</div>
+                        <div class="check-item" id="checkLogo">
+                            <span class="check-icon">✔️</span>
+                            <span>Logo d'entreprise authentifié</span>
+                        </div>
+                        <div class="check-item" id="checkTele">
+                            <span class="check-icon">✔️</span>
+                            <span>Conditions de télétravail conformes</span>
+                        </div>
+                        <div class="check-item" id="checkSpeed">
+                            <span class="check-icon">⚡</span>
+                            <span id="latencySpan">Temps d'inférence : 8 ms</span>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="actions-row">
+                        <button class="btn-outline" id="copyReportBtn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                            </svg>
+                            Copier le résumé
+                        </button>
+                        <button class="btn-outline" id="downloadJsonBtn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Exporter en JSON
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Benchmark Modèles -->
+    <div class="modal-overlay" id="benchmarkModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Benchmark des Modèles de Machine Learning</div>
+                <button class="btn-close" id="closeModal">&times;</button>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--slate-600);">
+                Comparatif des performances obtenu sur le dataset de référence (18 000 offres d'emploi) après validation croisée 4 plis :
+            </p>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Modèle</th>
+                            <th>Accuracy</th>
+                            <th>Précision</th>
+                            <th>Rappel</th>
+                            <th>F1-Score</th>
+                        </tr>
+                    </thead>
+                    <tbody id="metricsTableBody">
+                        <!-- Rempli dynamiquement -->
+                    </tbody>
+                </table>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--slate-500); line-height: 1.5;">
+                <strong>Pourquoi le SVM Linéaire ?</strong> Il surpasse les approches à base de règles et les modèles ensemblistes avec un score F1 optimal de 83.8% et une latence inférieure à 10 millisecondes.
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toastBox">Notification</div>
+
+    <script>
+        // Exemples
+        const SAMPLE_FRAUD = {
+            rawText: `Data Entry Specialist - Immediate hiring! Work from home with 4000 EUR weekly payout. No experience or degree needed. Upfront fee and processing fee are required for equipment shipping via wire transfer or western union. Please submit your bank account and social security number to register today.`,
+            title: "Data Entry Specialist - Work from Home",
+            company: "International Global Services",
+            location: "Télétravail total",
+            salary: "4000 € / semaine",
+            desc: "Urgent hiring! Work from home as Data Entry clerk. Processing fee required via wire transfer or western union. Send bank account and ID.",
+            req: "Sans expérience requise.",
+            telecommuting: true,
+            has_logo: false,
+            has_questions: false
+        };
+
+        const SAMPLE_LEGIT = {
+            rawText: `Ingénieur d'Études Backend Python (CDI). Éditeur de logiciel SaaS en logistique recherche un développeur Python/FastAPI expérimenté (3+ ans). Connaissances de PostgreSQL, Docker et CI/CD sur AWS. Salaire : 48k-55k €/an + mutuelle + primes.`,
+            title: "Ingénieur Backend Senior (Python / Cloud)",
+            company: "TechLogistics SaaS Solutions",
+            location: "Lyon, France",
+            salary: "48000 - 55000 €",
+            desc: "Conception d'APIs REST sous FastAPI et maintenance de microservices critiques en environnement conteneurisé Docker.",
+            req: "3+ ans d'expérience en Python et bases de données relationnelles.",
+            telecommuting: false,
+            has_logo: true,
+            has_questions: true
+        };
+
+        let currentAuditData = null;
+        let activeTab = "express";
+
+        // Éléments DOM
+        const tabExpress = document.getElementById("tabExpress");
+        const tabDetails = document.getElementById("tabDetails");
+        const expressMode = document.getElementById("expressMode");
+        const detailsMode = document.getElementById("detailsMode");
+        const rawText = document.getElementById("rawText");
+        const inputTitle = document.getElementById("inputTitle");
+        const inputCompany = document.getElementById("inputCompany");
+        const inputLocation = document.getElementById("inputLocation");
+        const inputSalary = document.getElementById("inputSalary");
+        const inputDesc = document.getElementById("inputDesc");
+        const inputReq = document.getElementById("inputReq");
+        const toggleTele = document.getElementById("toggleTele");
+        const toggleLogo = document.getElementById("toggleLogo");
+        const toggleQuestions = document.getElementById("toggleQuestions");
+
+        const auditForm = document.getElementById("auditForm");
+        const submitBtn = document.getElementById("submitBtn");
+        const btnSpinner = document.getElementById("btnSpinner");
+        const btnIcon = document.getElementById("btnIcon");
+        const btnText = document.getElementById("btnText");
+
+        const emptyState = document.getElementById("emptyState");
+        const resultState = document.getElementById("resultState");
+        const gaugeCircle = document.getElementById("gaugeCircle");
+        const riskPercent = document.getElementById("riskPercent");
+        const verdictBadge = document.getElementById("verdictBadge");
+        const verdictDesc = document.getElementById("verdictDesc");
+        const chipsContainer = document.getElementById("chipsContainer");
+        const checkLogo = document.getElementById("checkLogo");
+        const checkTele = document.getElementById("checkTele");
+        const latencySpan = document.getElementById("latencySpan");
+
+        // Onglets de saisie
+        tabExpress.addEventListener("click", () => {
+            activeTab = "express";
+            tabExpress.classList.add("active");
+            tabDetails.classList.remove("active");
+            expressMode.style.display = "block";
+            detailsMode.style.display = "none";
+        });
+
+        tabDetails.addEventListener("click", () => {
+            activeTab = "details";
+            tabDetails.classList.add("active");
+            tabExpress.classList.remove("active");
+            expressMode.style.display = "none";
+            detailsMode.style.display = "block";
+        });
+
+        // Notifications Toast
+        function showToast(msg) {
+            const toast = document.getElementById("toastBox");
+            toast.textContent = msg;
+            toast.classList.add("show");
+            setTimeout(() => toast.classList.remove("show"), 2800);
+        }
+
+        // Chargement des exemples
+        document.getElementById("loadFraud").addEventListener("click", () => {
+            rawText.value = SAMPLE_FRAUD.rawText;
+            inputTitle.value = SAMPLE_FRAUD.title;
+            inputCompany.value = SAMPLE_FRAUD.company;
+            inputLocation.value = SAMPLE_FRAUD.location;
+            inputSalary.value = SAMPLE_FRAUD.salary;
+            inputDesc.value = SAMPLE_FRAUD.desc;
+            inputReq.value = SAMPLE_FRAUD.req;
+            toggleTele.checked = SAMPLE_FRAUD.telecommuting;
+            toggleLogo.checked = SAMPLE_FRAUD.has_logo;
+            toggleQuestions.checked = SAMPLE_FRAUD.has_questions;
+            showToast("🚨 Offre frauduleuse type chargée");
+        });
+
+        document.getElementById("loadLegit").addEventListener("click", () => {
+            rawText.value = SAMPLE_LEGIT.rawText;
+            inputTitle.value = SAMPLE_LEGIT.title;
+            inputCompany.value = SAMPLE_LEGIT.company;
+            inputLocation.value = SAMPLE_LEGIT.location;
+            inputSalary.value = SAMPLE_LEGIT.salary;
+            inputDesc.value = SAMPLE_LEGIT.desc;
+            inputReq.value = SAMPLE_LEGIT.req;
+            toggleTele.checked = SAMPLE_LEGIT.telecommuting;
+            toggleLogo.checked = SAMPLE_LEGIT.has_logo;
+            toggleQuestions.checked = SAMPLE_LEGIT.has_questions;
+            showToast("✅ Offre légitime d'ingénieur chargée");
+        });
+
+        document.getElementById("clearForm").addEventListener("click", () => {
+            rawText.value = "";
+            inputTitle.value = "";
+            inputCompany.value = "";
+            inputLocation.value = "";
+            inputSalary.value = "";
+            inputDesc.value = "";
+            inputReq.value = "";
+            toggleTele.checked = false;
+            toggleLogo.checked = true;
+            toggleQuestions.checked = true;
+            emptyState.style.display = "block";
+            resultState.style.display = "none";
+            showToast("Formulaire réinitialisé");
+        });
+
+        // Animation du score (compteur fluide)
+        function animateValue(obj, start, end, duration) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const current = Math.floor(progress * (end - start) + start);
+                obj.textContent = current + "%";
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // Soumission du formulaire
+        auditForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            let textPayload = "";
+            if (activeTab === "express") {
+                textPayload = rawText.value.trim();
+            } else {
+                textPayload = [
+                    inputTitle.value, inputCompany.value, inputLocation.value,
+                    inputSalary.value, inputDesc.value, inputReq.value
+                ].filter(Boolean).join(" ");
+            }
+
+            if (!textPayload) {
+                showToast("⚠️ Veuillez renseigner le contenu de l'offre");
+                return;
+            }
+
+            // Animation chargement
+            btnSpinner.style.display = "inline-block";
+            btnIcon.style.display = "none";
+            btnText.textContent = "Analyse en cours...";
+            submitBtn.disabled = true;
+
+            try {
+                const startTime = performance.now();
+                const response = await fetch("/api/predict", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        text: textPayload,
+                        telecommuting: toggleTele.checked ? 1 : 0,
+                        has_company_logo: toggleLogo.checked ? 1 : 0,
+                        has_questions: toggleQuestions.checked ? 1 : 0
+                    })
+                });
+
+                const data = await response.json();
+                const latency = Math.round(performance.now() - startTime);
+
+                currentAuditData = {
+                    ...data,
+                    latency_ms: latency,
+                    timestamp: new Date().toISOString()
+                };
+
+                renderResults(data, latency);
+            } catch (err) {
+                console.error(err);
+                showToast("❌ Erreur lors de l'analyse");
+            } finally {
+                btnSpinner.style.display = "none";
+                btnIcon.style.display = "inline-block";
+                btnText.textContent = "Analyser la fiabilité de l'offre";
+                submitBtn.disabled = false;
+            }
+        });
+
+        function renderResults(data, latency) {
+            emptyState.style.display = "none";
+            resultState.style.display = "block";
+
+            const risk = data.risk_score;
+            const isFraud = data.prediction === 1;
+
+            // Animation jauge circulaire (circonférence = 2 * PI * 45 ≈ 283)
+            const circumference = 283;
+            const offset = circumference - (risk / 100) * circumference;
+            gaugeCircle.style.strokeDashoffset = offset;
+
+            if (risk >= 50) {
+                gaugeCircle.style.stroke = "var(--danger)";
+            } else if (risk >= 25) {
+                gaugeCircle.style.stroke = "var(--warning)";
+            } else {
+                gaugeCircle.style.stroke = "var(--success)";
+            }
+
+            animateValue(riskPercent, 0, Math.round(risk), 800);
+
+            // Verdict
+            if (isFraud) {
+                verdictBadge.className = "verdict-badge fraud";
+                verdictBadge.innerHTML = "🚨 Risque Élevé de Fraude";
+                verdictDesc.textContent = "L'analyse linguistique et les signaux indiquent une offre potentiellement frauduleuse.";
+            } else {
+                verdictBadge.className = "verdict-badge legit";
+                verdictBadge.innerHTML = "✅ Offre Probablement Légitime";
+                verdictDesc.textContent = "L'annonce respecte les standards usuels des recruteurs vérifiés.";
+            }
+
+            // Mots-clés
+            chipsContainer.innerHTML = "";
+            if (data.detected_terms && data.detected_terms.length > 0) {
+                data.detected_terms.forEach(term => {
+                    const span = document.createElement("span");
+                    span.className = "chip";
+                    span.textContent = "⚠️ " + term;
+                    chipsContainer.appendChild(span);
+                });
+            } else {
+                const span = document.createElement("span");
+                span.className = "chip clean";
+                span.textContent = "✔️ Aucun terme suspect détecté";
+                chipsContainer.appendChild(span);
+            }
+
+            // Checkpoints
+            checkLogo.innerHTML = toggleLogo.checked 
+                ? '<span class="check-icon">✔️</span><span>Logo d\'entreprise présent</span>'
+                : '<span class="check-icon" style="color:var(--danger);">❌</span><span>Absence de logo d\'entreprise (Risque)</span>';
+
+            checkTele.innerHTML = toggleTele.checked
+                ? '<span class="check-icon">⚠️</span><span>Offre à distance déclarée</span>'
+                : '<span class="check-icon">✔️</span><span>Poste en présentiel / hybride</span>';
+
+            latencySpan.textContent = `Temps d'inférence : ${latency} ms`;
+        }
+
+        // Export et copie
+        document.getElementById("copyReportBtn").addEventListener("click", () => {
+            if (!currentAuditData) return;
+            const report = `Rapport TrustJob AI:\n- Risque estimé : ${currentAuditData.risk_score}%\n- Verdict : ${currentAuditData.prediction === 1 ? 'FRAUDULEUSE' : 'LÉGITIME'}\n- Termes suspects : ${currentAuditData.detected_terms.join(', ') || 'Aucun'}`;
+            navigator.clipboard.writeText(report);
+            showToast("📋 Résumé copié dans le presse-papier !");
+        });
+
+        document.getElementById("downloadJsonBtn").addEventListener("click", () => {
+            if (!currentAuditData) return;
+            const blob = new Blob([JSON.stringify(currentAuditData, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `trustjob-audit-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("💾 Rapport JSON téléchargé");
+        });
+
+        // Modal Benchmark
+        const benchmarkModal = document.getElementById("benchmarkModal");
+        document.getElementById("openBenchmark").addEventListener("click", async () => {
+            benchmarkModal.style.display = "flex";
+            const res = await fetch("/api/metrics");
+            const metrics = await res.json();
+            const tbody = document.getElementById("metricsTableBody");
+            tbody.innerHTML = "";
+            metrics.forEach(row => {
+                const tr = document.createElement("tr");
+                if (row["Modèle"] && row["Modèle"].includes("SVM")) tr.classList.add("highlight");
+                tr.innerHTML = `
+                    <td><strong>${row["Modèle"]}</strong></td>
+                    <td>${(row["Accuracy"] * 100).toFixed(1)}%</td>
+                    <td>${(row["Précision"] * 100).toFixed(1)}%</td>
+                    <td>${(row["Rappel"] * 100).toFixed(1)}%</td>
+                    <td><strong>${(row["F1 test interne"] * 100).toFixed(1)}%</strong></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        });
+
+        document.getElementById("closeModal").addEventListener("click", () => {
+            benchmarkModal.style.display = "none";
+        });
+
+        benchmarkModal.addEventListener("click", (e) => {
+            if (e.target === benchmarkModal) benchmarkModal.style.display = "none";
+        });
+    </script>
+</body>
+</html>
