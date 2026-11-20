@@ -1,0 +1,56 @@
+{
+  "seed": 42,
+  "train_shape": [
+    12000,
+    18
+  ],
+  "holdout_rows": 2400,
+  "best_model": "SVM linéaire",
+  "results": [
+    {
+      "Modèle": "Régression logistique",
+      "Meilleurs paramètres": {
+        "model__C": 2.0
+      },
+      "F1 CV (4 plis)": 0.6675472564977684,
+      "Accuracy": 0.9591666666666666,
+      "Précision": 0.553763440860215,
+      "Rappel": 0.8728813559322034,
+      "F1 test interne": 0.6776315789473685
+    },
+    {
+      "Modèle": "KNN",
+      "Meilleurs paramètres": {
+        "model__n_neighbors": 3,
+        "model__weights": "distance"
+      },
+      "F1 CV (4 plis)": 0.7132085970069926,
+      "Accuracy": 0.98125,
+      "Précision": 0.9866666666666667,
+      "Rappel": 0.6271186440677966,
+      "F1 test interne": 0.7668393782383419
+    },
+    {
+      "Modèle": "SVM linéaire",
+      "Meilleurs paramètres": {
+        "model__C": 2.0
+      },
+      "F1 CV (4 plis)": 0.8287589489190382,
+      "Accuracy": 0.9841666666666666,
+      "Précision": 0.8448275862068966,
+      "Rappel": 0.8305084745762712,
+      "F1 test interne": 0.8376068376068376
+    },
+    {
+      "Modèle": "Random Forest",
+      "Meilleurs paramètres": {
+        "model__max_depth": null
+      },
+      "F1 CV (4 plis)": 0.7540761019932156,
+      "Accuracy": 0.98375,
+      "Précision": 0.9247311827956989,
+      "Rappel": 0.7288135593220338,
+      "F1 test interne": 0.8151658767772512
+    }
+  ]
+}
