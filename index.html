@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrustJob AI – Détection de fausses offres d’emploi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070B14; --bg2:#0C1220;
+  --glass:rgba(255,255,255,.045); --glass-2:rgba(255,255,255,.075); --stroke:rgba(255,255,255,.09);
+  --ink:#EAF0FA; --ink-2:#97A6BE; --ink-3:#62718A;
+  --a1:#7C8CFF; --a2:#22D3EE; --grad:linear-gradient(135deg,#7C8CFF 0%,#22D3EE 100%);
+  --ok:#34D399; --ok-bg:rgba(52,211,153,.12);
+  --bad:#FF5D73; --bad-bg:rgba(255,93,115,.13);
+  --warn:#FBBF24; --warn-bg:rgba(251,191,36,.13);
+  --shadow:0 20px 60px -20px rgba(0,0,0,.7);
+  --blob1:rgba(124,140,255,.30); --blob2:rgba(34,211,238,.20); --blob3:rgba(255,93,115,.10);
+  --on-accent:#06101C;
+}
+[data-theme=light]{
+  --bg:#F3F6FC; --bg2:#FFFFFF;
+  --glass:rgba(255,255,255,.72); --glass-2:rgba(255,255,255,.95); --stroke:rgba(15,30,60,.10);
+  --ink:#0E1A33; --ink-2:#4B5B78; --ink-3:#8190AA;
+  --a1:#4F5FEA; --a2:#0891B2; --grad:linear-gradient(135deg,#4F5FEA 0%,#0AA5C7 100%);
+  --ok:#0E9F6E; --ok-bg:rgba(14,159,110,.10);
+  --bad:#DC2F4A; --bad-bg:rgba(220,47,74,.09);
+  --warn:#B7791F; --warn-bg:rgba(183,121,31,.11);
+  --shadow:0 20px 50px -25px rgba(30,50,100,.35);
+  --blob1:rgba(79,95,234,.16); --blob2:rgba(8,145,178,.14); --blob3:rgba(220,47,74,.06);
+  --on-accent:#fff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font-family:"Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--a2);outline-offset:3px;border-radius:8px}
+[hidden]{display:none!important}
+
+/* ---------- Fond animé ---------- */
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.bg i{position:absolute;border-radius:50%;filter:blur(90px);will-change:transform}
+.bg i:nth-child(1){width:560px;height:560px;background:var(--blob1);top:-160px;left:8%;animation:drift1 22s ease-in-out infinite alternate}
+.bg i:nth-child(2){width:520px;height:520px;background:var(--blob2);bottom:-180px;right:4%;animation:drift2 26s ease-in-out infinite alternate}
+.bg i:nth-child(3){width:380px;height:380px;background:var(--blob3);top:45%;left:48%;animation:drift3 30s ease-in-out infinite alternate}
+.bg::after{content:"";position:absolute;inset:0;background-image:linear-gradient(var(--stroke) 1px,transparent 1px),linear-gradient(90deg,var(--stroke) 1px,transparent 1px);background-size:56px 56px;mask-image:radial-gradient(ellipse at 50% 20%,#000 0%,transparent 70%);-webkit-mask-image:radial-gradient(ellipse at 50% 20%,#000 0%,transparent 70%);opacity:.35}
+@keyframes drift1{to{transform:translate(120px,80px) scale(1.15)}}
+@keyframes drift2{to{transform:translate(-140px,-60px) scale(1.1)}}
+@keyframes drift3{to{transform:translate(-90px,70px) scale(.85)}}
+
+/* ---------- Structure ---------- */
+.app{position:relative;z-index:1;display:grid;grid-template-columns:264px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;padding:22px 16px;display:flex;flex-direction:column;gap:6px;border-right:1px solid var(--stroke);background:var(--glass);backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%)}
+.brand{display:flex;align-items:center;gap:12px;padding:6px 10px 22px}
+.brand .mark{width:42px;height:42px;border-radius:13px;background:var(--grad);display:grid;place-items:center;box-shadow:0 8px 24px -6px var(--a1)}
+.brand b{display:block;font-size:18px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.brand small{color:var(--ink-2);font-size:12px}
+.nav{display:flex;flex-direction:column;gap:4px}
+.nav button{position:relative;display:flex;align-items:center;gap:12px;padding:11px 14px;border:0;background:none;border-radius:12px;color:var(--ink-2);font-weight:600;cursor:pointer;text-align:left;transition:background .2s,color .2s,transform .2s}
+.nav button:hover{background:var(--glass-2);color:var(--ink)}
+.nav button[aria-selected=true]{background:var(--glass-2);color:var(--ink);box-shadow:inset 0 0 0 1px var(--stroke)}
+.nav button[aria-selected=true]::before{content:"";position:absolute;left:-16px;top:10px;bottom:10px;width:4px;border-radius:0 4px 4px 0;background:var(--grad)}
+.nav svg{flex:none;opacity:.9}
+.side-foot{margin-top:auto;display:flex;flex-direction:column;gap:12px}
+.pill{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:var(--glass-2);border:1px solid var(--stroke);font-size:13px;font-weight:600}
+.led{width:9px;height:9px;border-radius:50%;background:var(--ink-3);position:relative}
+.led.on{background:var(--ok)}
+.led.on::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--ok);opacity:0;animation:ping 2s ease-out infinite}
+.led.off{background:var(--bad)}
+@keyframes ping{0%{transform:scale(.5);opacity:.7}100%{transform:scale(1.6);opacity:0}}
+.theme{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:12px;background:var(--glass-2);border:1px solid var(--stroke);font-size:13px;font-weight:600;cursor:pointer;width:100%}
+.theme .tg{width:42px;height:24px;border-radius:99px;background:var(--glass);border:1px solid var(--stroke);position:relative;transition:background .3s}
+.theme .tg::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--grad);transition:transform .35s cubic-bezier(.3,1.4,.5,1)}
+[data-theme=light] .theme .tg::after{transform:translateX(18px)}
+
+.main{padding:34px clamp(18px,3.4vw,48px) 60px;max-width:1280px;width:100%}
+.view{animation:viewIn .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes viewIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.page-head{margin-bottom:24px}
+h1{font-size:clamp(26px,3.2vw,36px);letter-spacing:-.03em;line-height:1.12;margin:0 0 8px;font-weight:800}
+.lead{color:var(--ink-2);margin:0;max-width:64ch}
+h2{font-size:16px;margin:0 0 4px;font-weight:700}
+
+.card{background:var(--glass);border:1px solid var(--stroke);border-radius:20px;padding:22px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:var(--shadow);position:relative}
+.grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:20px;align-items:start}
+.sticky{position:sticky;top:20px}
+
+/* Tuiles de stats */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.tile{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:18px;background:var(--glass);border:1px solid var(--stroke);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);transition:transform .25s,border-color .25s}
+.tile:hover{transform:translateY(-3px);border-color:var(--a1)}
+.tile .ic{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;flex:none}
+.tile b{display:block;font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile span{color:var(--ink-2);font-size:13px}
+.ic.a{background:rgba(124,140,255,.16);color:var(--a1)}
+.ic.r{background:var(--bad-bg);color:var(--bad)}
+.ic.c{background:rgba(34,211,238,.14);color:var(--a2)}
+
+/* Formulaire */
+label.l{display:block;font-weight:600;font-size:13px;margin:0 0 6px;color:var(--ink-2)}
+.hint{color:var(--ink-3);font-weight:500}
+input[type=text],textarea{width:100%;padding:12px 14px;border:1px solid var(--stroke);border-radius:12px;background:var(--glass);transition:border-color .2s,box-shadow .2s,background .2s}
+input[type=text]::placeholder,textarea::placeholder{color:var(--ink-3)}
+input[type=text]:focus,textarea:focus{outline:0;border-color:var(--a2);box-shadow:0 0 0 4px rgba(34,211,238,.16);background:var(--glass-2)}
+textarea{resize:vertical;min-height:100px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.field{margin-bottom:16px;position:relative}
+.count{position:absolute;right:12px;bottom:10px;font-size:12px;color:var(--ink-3);pointer-events:none}
+.examples{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:20px;font-size:13px;color:var(--ink-2)}
+.chipbtn{border:1px solid var(--stroke);background:var(--glass-2);padding:7px 14px;border-radius:99px;font-size:13px;font-weight:600;cursor:pointer;transition:transform .2s,border-color .2s}
+.chipbtn:hover{transform:translateY(-2px);border-color:var(--a2)}
+details{margin-bottom:18px;border:1px solid var(--stroke);border-radius:14px;padding:0 16px;background:var(--glass)}
+summary{cursor:pointer;padding:13px 0;font-weight:700;font-size:14px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-size:20px;color:var(--ink-2);transition:transform .3s}
+details[open] summary::after{transform:rotate(45deg)}
+details[open] summary{margin-bottom:14px;border-bottom:1px solid var(--stroke)}
+
+.switches{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.sw{display:flex;flex-direction:column;gap:10px;padding:12px 14px;border:1px solid var(--stroke);border-radius:14px;cursor:pointer;font-size:13px;font-weight:600;background:var(--glass);user-select:none;transition:border-color .2s,background .2s}
+.sw:hover{border-color:var(--a1)}
+.sw input{position:absolute;opacity:0;pointer-events:none}
+.sw .tg{width:40px;height:22px;border-radius:99px;background:var(--glass-2);border:1px solid var(--stroke);position:relative;transition:background .3s}
+.sw .tg::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--ink-3);transition:transform .35s cubic-bezier(.3,1.4,.5,1),background .3s}
+.sw input:checked + .tg{background:var(--grad);border-color:transparent}
+.sw input:checked + .tg::after{transform:translateX(18px);background:#fff}
+.sw input:focus-visible + .tg{outline:2px solid var(--a2);outline-offset:3px}
+
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{position:relative;overflow:hidden;border:1px solid var(--stroke);background:var(--glass-2);padding:12px 20px;border-radius:13px;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s,border-color .2s;display:inline-flex;align-items:center;gap:9px}
+.btn:hover{transform:translateY(-2px);border-color:var(--a2)}
+.btn:active{transform:translateY(0) scale(.98)}
+.btn.primary{background:var(--grad);border-color:transparent;color:var(--on-accent);box-shadow:0 10px 30px -10px var(--a1)}
+.btn.primary::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-20deg);animation:shine 3.4s ease-in-out infinite}
+@keyframes shine{0%,60%{left:-60%}100%{left:130%}}
+.btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.btn.small{padding:8px 14px;font-size:13px;border-radius:11px}
+.kbd{font-size:11px;opacity:.7;border:1px solid currentColor;border-radius:5px;padding:0 5px}
+.spin{width:16px;height:16px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:rot .7s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* ---------- Résultat ---------- */
+.empty{text-align:center;padding:48px 10px;color:var(--ink-2)}
+.radar{width:120px;height:120px;margin:0 auto 18px;position:relative;border-radius:50%;border:1px solid var(--stroke)}
+.radar::before,.radar::after{content:"";position:absolute;border-radius:50%;border:1px solid var(--stroke);inset:22px}
+.radar::after{inset:44px}
+.radar i{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,transparent 0 70%,rgba(34,211,238,.45) 100%);animation:rot 3.2s linear infinite;mask-image:radial-gradient(circle,#000 62%,transparent 63%);-webkit-mask-image:radial-gradient(circle,#000 62%,transparent 63%)}
+.radar b{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--a2);top:30px;left:78px;box-shadow:0 0 12px var(--a2);animation:blink 2.4s ease-in-out infinite}
+@keyframes blink{50%{opacity:.25}}
+
+.scan{text-align:center;padding:40px 10px}
+.scan .steps{margin-top:6px;color:var(--ink-2);font-size:14px;min-height:22px}
+.scan .bar{height:5px;border-radius:5px;background:var(--glass-2);margin:18px auto 0;max-width:240px;overflow:hidden}
+.scan .bar i{display:block;height:100%;width:40%;background:var(--grad);border-radius:5px;animation:sweep 1.1s ease-in-out infinite}
+@keyframes sweep{0%{transform:translateX(-110%)}100%{transform:translateX(280%)}}
+
+.reveal > *{opacity:0;transform:translateY(12px);animation:rise .55s cubic-bezier(.2,.8,.2,1) forwards}
+.reveal > *:nth-child(1){animation-delay:.02s}.reveal > *:nth-child(2){animation-delay:.12s}.reveal > *:nth-child(3){animation-delay:.24s}
+.reveal > *:nth-child(4){animation-delay:.34s}.reveal > *:nth-child(5){animation-delay:.44s}.reveal > *:nth-child(6){animation-delay:.54s}.reveal > *:nth-child(7){animation-delay:.64s}
+@keyframes rise{to{opacity:1;transform:none}}
+
+.gauge{position:relative;width:min(100%,250px);margin:0 auto}
+.gauge svg{display:block;width:100%;height:auto;overflow:visible}
+.g-track{stroke:var(--glass-2)}
+.g-val{transition:stroke .4s}
+.gauge .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;padding-top:6px}
+.gauge .mid b{font-size:54px;font-weight:800;letter-spacing:-.05em;line-height:1;font-variant-numeric:tabular-nums}
+.gauge .mid span{font-size:12px;color:var(--ink-2);margin-top:4px}
+.gauge .scale{position:absolute;left:0;right:0;bottom:2px;display:flex;justify-content:space-between;padding:0 14%;font-size:11px;color:var(--ink-3)}
+.gauge.bad{--c1:#FF5D73;--c2:#FF9A5C}.gauge.ok{--c1:#34D399;--c2:#22D3EE}
+.gauge.bad .glow{filter:drop-shadow(0 0 14px rgba(255,93,115,.55))}
+.gauge.ok .glow{filter:drop-shadow(0 0 14px rgba(52,211,153,.45))}
+
+.verdict{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:16px;margin:16px 0 4px}
+.verdict.bad{background:var(--bad-bg);color:var(--bad);border:1px solid rgba(255,93,115,.3)}
+.verdict.ok{background:var(--ok-bg);color:var(--ok);border:1px solid rgba(52,211,153,.3)}
+.verdict .vi{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:currentColor;position:relative}
+.verdict .vi svg{color:var(--bg)}
+.verdict.bad .vi::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--bad);animation:ping 1.8s ease-out infinite}
+.verdict strong{display:block;font-size:17px;line-height:1.2;color:var(--ink)}
+.verdict small{color:var(--ink-2);font-size:13px}
+
+.sub{font-size:12.5px;font-weight:700;margin:20px 0 10px;color:var(--ink-2)}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{background:var(--bad-bg);color:var(--bad);border:1px solid rgba(255,93,115,.28);padding:5px 12px;border-radius:99px;font-size:13px;font-weight:600;opacity:0;transform:scale(.7);animation:pop .45s cubic-bezier(.3,1.5,.5,1) forwards}
+@keyframes pop{to{opacity:1;transform:none}}
+.signals{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.signals li{display:flex;gap:11px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:var(--glass);border:1px solid var(--stroke);font-size:13.5px}
+.signals .m{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;margin-top:1px}
+.m.w{background:var(--warn-bg);color:var(--warn)}.m.g{background:var(--ok-bg);color:var(--ok)}
+.note{font-size:12.5px;color:var(--ink-3);margin:18px 0 0;padding-top:14px;border-top:1px solid var(--stroke)}
+.preview{max-height:220px;overflow:auto;white-space:pre-wrap;font-size:13.5px;color:var(--ink-2);padding-bottom:14px}
+mark{background:var(--bad-bg);color:var(--bad);font-weight:700;padding:1px 4px;border-radius:5px;box-shadow:0 0 0 1px rgba(255,93,115,.3)}
+
+/* ---------- Tableaux & perf ---------- */
+.table-wrap{overflow-x:auto;padding:0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:13px 16px;border-bottom:1px solid var(--stroke);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr{transition:background .15s}
+tbody tr:hover{background:var(--glass-2)}
+th{font-size:12.5px;color:var(--ink-3);font-weight:700;position:sticky;top:0;background:var(--bg2)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tag{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:99px;font-size:12.5px;font-weight:700}
+.tag::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.tag.bad{background:var(--bad-bg);color:var(--bad)}.tag.ok{background:var(--ok-bg);color:var(--ok)}
+
+.bento{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kpi{padding:18px 20px;border-radius:18px;background:var(--glass);border:1px solid var(--stroke);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.kpi b{display:block;font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi span{font-size:13px;color:var(--ink-2)}
+.kpi.hero{background:var(--grad);color:var(--on-accent);border:0;box-shadow:0 20px 50px -20px var(--a1)}
+.kpi.hero span{color:inherit;opacity:.8}
+.models{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.model{padding:20px;border-radius:20px;background:var(--glass);border:1px solid var(--stroke);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);transition:transform .25s,border-color .25s}
+.model:hover{transform:translateY(-4px);border-color:var(--a1)}
+.model.best{border-color:var(--a2);box-shadow:0 0 0 1px var(--a2),0 20px 50px -25px var(--a2)}
+.model header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:14px}
+.model h3{margin:0;font-size:16px;font-weight:700}
+.badge{font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--grad);color:var(--on-accent)}
+.metric{display:grid;grid-template-columns:84px 1fr 54px;gap:10px;align-items:center;font-size:13px;margin:9px 0}
+.metric span:first-child{color:var(--ink-2)}
+.metric .track{height:8px;border-radius:8px;background:var(--glass-2);overflow:hidden}
+.metric .fill{height:100%;width:0;border-radius:8px;background:var(--grad);transition:width 1s cubic-bezier(.2,.8,.2,1)}
+.model.rule .fill{background:var(--ink-3)}
+.metric b{text-align:right;font-variant-numeric:tabular-nums}
+.cv{margin-top:12px;padding-top:12px;border-top:1px solid var(--stroke);font-size:12.5px;color:var(--ink-3);display:flex;justify-content:space-between}
+
+/* ---------- Lot CSV ---------- */
+.drop{border:2px dashed var(--stroke);border-radius:22px;padding:42px 20px;text-align:center;cursor:pointer;background:var(--glass);transition:border-color .25s,background .25s,transform .25s}
+.drop:hover,.drop.over{border-color:var(--a2);background:var(--glass-2);transform:translateY(-2px)}
+.drop .up{width:58px;height:58px;border-radius:18px;background:var(--grad);display:grid;place-items:center;margin:0 auto 14px;color:var(--on-accent);animation:float 3s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-6px)}}
+.drop b{font-size:17px}
+.progress{height:10px;background:var(--glass-2);border-radius:10px;overflow:hidden;margin:20px 0 8px}
+.progress div{height:100%;width:0;background:var(--grad);border-radius:10px;transition:width .3s;position:relative}
+.progress div.run::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);animation:sweep 1.2s linear infinite}
+.batch-top{display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:center;margin:18px 0}
+.donut{position:relative;width:180px;height:180px;margin:0 auto}
+.donut svg{width:100%;height:100%;transform:rotate(-90deg)}
+.donut .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.donut .mid b{font-size:28px;font-weight:800;letter-spacing:-.03em}
+.donut .mid span{font-size:12px;color:var(--ink-2)}
+.d-track{stroke:var(--ok)}
+.d-val{stroke:var(--bad);transition:stroke-dasharray .6s cubic-bezier(.2,.8,.2,1)}
+.mini{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+select{padding:9px 14px;border-radius:11px;border:1px solid var(--stroke);background:var(--bg2);cursor:pointer}
+
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:var(--glass-2);backdrop-filter:blur(20px);border:1px solid var(--stroke);color:var(--ink);padding:12px 20px;border-radius:14px;font-size:14px;font-weight:600;z-index:50;box-shadow:var(--shadow);animation:toast .4s cubic-bezier(.3,1.4,.5,1)}
+@keyframes toast{from{opacity:0;transform:translate(-50%,20px)}}
+
+/* ---------- Responsive ---------- */
+@media (max-width:1000px){
+  .grid{grid-template-columns:1fr}.sticky{position:static}
+  .bento{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr}
+  .side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;z-index:20;flex-direction:row;padding:6px 8px;border-right:0;border-top:1px solid var(--stroke);justify-content:center}
+  .brand,.side-foot .pill,.nav button span{display:none}
+  .nav{flex-direction:row;gap:2px;width:100%;justify-content:space-around}
+  .nav button{padding:10px 14px}
+  .nav button[aria-selected=true]::before{left:30%;right:30%;top:-7px;bottom:auto;width:auto;height:3px;border-radius:0 0 4px 4px}
+  .side-foot{margin:0}
+  .theme{padding:8px 10px;width:auto}.theme span,.theme .tg{display:none}
+  .theme::before{content:"◐";font-size:18px}
+  .main{padding-bottom:110px}
+  .tiles{grid-template-columns:1fr}
+  .row,.switches,.mini{grid-template-columns:1fr}
+  .batch-top{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="mark">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#06101C" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 4 6v5.5c0 5 3.3 8.7 8 10 4.7-1.300 8-5 8-10V6l-8-3.500Z"/><path d="m8.500 12 2.500 2.500 4.500-5"/></svg>
+      </div>
+      <div><b>TrustJob AI</b><small>Détection de fraude</small></div>
+    </div>
+    <nav class="nav" role="tablist" aria-label="Sections">
+      <button role="tab" aria-selected="true" data-tab="analyse"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.500-3.500"/></svg><span>Analyser une offre</span></button>
+      <button role="tab" aria-selected="false" data-tab="lot"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span>Analyse par lot (CSV)</span></button>
+      <button role="tab" aria-selected="false" data-tab="perf"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>Performance des modèles</span></button>
+      <button role="tab" aria-selected="false" data-tab="histo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Historique</span></button>
+    </nav>
+    <div class="side-foot">
+      <div class="pill" id="status"><span class="led"></span><span>Connexion…</span></div>
+      <button class="theme" id="theme" type="button" aria-label="Changer de thème"><span>Thème sombre</span><i class="tg"></i></button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+  <!-- ============ ANALYSE ============ -->
+  <section id="tab-analyse" class="view">
+    <div class="page-head">
+      <h1>Vérifiez une offre d’emploi en quelques secondes</h1>
+      <p class="lead">Collez le contenu d’une annonce : le modèle estime le risque de fraude et repère les expressions suspectes.</p>
+    </div>
+
+    <div class="tiles">
+      <div class="tile"><div class="ic a"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><div><b id="t-total">0</b><span>offres analysées</span></div></div>
+      <div class="tile"><div class="ic r"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.300 3.900 1.800 18a2 2 0 0 0 1.700 3h17a2 2 0 0 0 1.700-3L13.700 3.900a2 2 0 0 0-3.400 0Z"/><path d="M12 9v4M12 17h.01"/></svg></div><div><b id="t-fraud">0</b><span>offres suspectes</span></div></div>
+      <div class="tile"><div class="ic c"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/></svg></div><div><b id="t-model" style="font-size:20px">–</b><span>modèle actif</span></div></div>
+    </div>
+
+    <div class="grid">
+      <form class="card" id="form" autocomplete="off">
+        <div class="examples">
+          <span>Essayer avec</span>
+          <button type="button" class="chipbtn" id="ex-ok">Une offre classique</button>
+          <button type="button" class="chipbtn" id="ex-bad">Une offre suspecte</button>
+        </div>
+
+        <div class="row">
+          <div><label class="l" for="title">Intitulé du poste</label><input type="text" id="title" placeholder="Ex. Développeur web junior"></div>
+          <div><label class="l" for="location">Lieu <span class="hint">(pays, région, ville)</span></label><input type="text" id="location" placeholder="Ex. TN, Sfax"></div>
+        </div>
+        <div class="field"><label class="l" for="company_profile">Présentation de l’entreprise</label><textarea id="company_profile" rows="3"></textarea></div>
+        <div class="field"><label class="l" for="description">Description du poste</label><textarea id="description" rows="6"></textarea><span class="count" id="count">0 caractère</span></div>
+        <div class="field"><label class="l" for="requirements">Profil recherché</label><textarea id="requirements" rows="3"></textarea></div>
+        <div class="field"><label class="l" for="benefits">Avantages</label><textarea id="benefits" rows="2"></textarea></div>
+
+        <details>
+          <summary>Informations complémentaires</summary>
+          <div class="row">
+            <div><label class="l" for="department">Département</label><input type="text" id="department"></div>
+            <div><label class="l" for="salary_range">Fourchette de salaire</label><input type="text" id="salary_range" placeholder="Ex. 1500-2000"></div>
+          </div>
+          <div class="row">
+            <div><label class="l" for="employment_type">Type de contrat</label><input type="text" id="employment_type" placeholder="Ex. Full-time"></div>
+            <div><label class="l" for="required_experience">Expérience requise</label><input type="text" id="required_experience" placeholder="Ex. Entry level"></div>
+          </div>
+          <div class="row">
+            <div><label class="l" for="required_education">Niveau d’études</label><input type="text" id="required_education"></div>
+            <div><label class="l" for="industry">Secteur</label><input type="text" id="industry"></div>
+          </div>
+          <div class="field"><label class="l" for="function">Fonction</label><input type="text" id="function"></div>
+        </details>
+
+        <div class="switches">
+          <label class="sw"><span>Télétravail possible</span><input type="checkbox" id="telecommuting"><i class="tg"></i></label>
+          <label class="sw"><span>Logo de l’entreprise</span><input type="checkbox" id="has_company_logo" checked><i class="tg"></i></label>
+          <label class="sw"><span>Questions de présélection</span><input type="checkbox" id="has_questions" checked><i class="tg"></i></label>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn primary" id="go">Analyser l’offre <span class="kbd">Ctrl ↵</span></button>
+          <button type="button" class="btn" id="clear">Effacer</button>
+        </div>
+      </form>
+
+      <aside class="card sticky" id="result" aria-live="polite">
+        <div class="empty" id="empty">
+          <div class="radar"><i></i><b></b></div>
+          <p style="margin:0">En attente d’une offre à analyser.<br><span class="hint">Remplissez la description du poste, puis lancez l’analyse.</span></p>
+        </div>
+        <div class="scan" id="scan" hidden>
+          <div class="radar"><i></i><b></b></div>
+          <b>Analyse en cours</b>
+          <div class="steps" id="steps"></div>
+          <div class="bar"><i></i></div>
+        </div>
+        <div id="out" hidden></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ LOT CSV ============ -->
+  <section id="tab-lot" class="view" hidden>
+    <div class="page-head">
+      <h1>Analyse par lot</h1>
+      <p class="lead">Importez un fichier d’offres (mêmes colonnes que <b>job_postings_test.csv</b>). Chaque ligne est analysée, puis vous exportez les résultats.</p>
+    </div>
+
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choisir un fichier CSV">
+      <div class="up"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg></div>
+      <b>Déposez votre fichier CSV ici</b><br><span class="hint">ou cliquez pour le choisir sur votre ordinateur</span>
+      <input type="file" id="file" accept=".csv,text/csv" hidden>
+    </div>
+
+    <div id="batch" hidden>
+      <div class="progress"><div id="pbar"></div></div>
+      <div class="hint" id="ptext"></div>
+
+      <div class="batch-top">
+        <div class="donut">
+          <svg viewBox="0 0 120 120"><circle class="d-track" cx="60" cy="60" r="48" fill="none" stroke-width="13" pathLength="100"/><circle class="d-val" id="d-val" cx="60" cy="60" r="48" fill="none" stroke-width="13" stroke-linecap="round" pathLength="100" style="stroke-dasharray:0 100"/></svg>
+          <div class="mid"><b id="k-rate">0 %</b><span>jugées suspectes</span></div>
+        </div>
+        <div class="mini">
+          <div class="kpi"><b id="k-total">0</b><span>offres analysées</span></div>
+          <div class="kpi"><b id="k-fraud" style="color:var(--bad)">0</b><span>frauduleuses</span></div>
+          <div class="kpi"><b id="k-ok" style="color:var(--ok)">0</b><span>légitimes</span></div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn small" id="stop" type="button">Arrêter</button>
+        <select id="filter" aria-label="Filtrer les résultats">
+          <option value="all">Toutes les offres</option>
+          <option value="1">Suspectes uniquement</option>
+          <option value="0">Légitimes uniquement</option>
+        </select>
+        <span style="flex:1"></span>
+        <button class="btn small" id="dl-sub" type="button" disabled>Export soumission (id, fraudulent)</button>
+        <button class="btn small primary" id="dl-full" type="button" disabled>Export détaillé</button>
+      </div>
+
+      <div class="card table-wrap">
+        <table>
+          <thead><tr><th>Id</th><th>Intitulé</th><th>Verdict</th><th class="num">Indice</th><th>Expressions à risque</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p class="hint" id="more"></p>
+    </div>
+  </section>
+
+  <!-- ============ PERF ============ -->
+  <section id="tab-perf" class="view" hidden>
+    <div class="page-head">
+      <h1>Performance des modèles</h1>
+      <p class="lead">Résultats sur le jeu de test interne (20 % des données). Le rappel mesure la part des vraies fraudes détectées ; le F1 équilibre précision et rappel.</p>
+    </div>
+    <div id="perf-body"><div class="card empty">Chargement des métriques…</div></div>
+  </section>
+
+  <!-- ============ HISTO ============ -->
+  <section id="tab-histo" class="view" hidden>
+    <div class="page-head">
+      <h1>Historique</h1>
+      <p class="lead">Les 30 dernières offres analysées depuis ce navigateur. Rien n’est envoyé ailleurs.</p>
+    </div>
+    <div class="card table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Intitulé</th><th>Verdict</th><th class="num">Indice</th></tr></thead>
+        <tbody id="histo-rows"></tbody>
+      </table>
+    </div>
+    <div class="toolbar" style="margin-top:14px"><button class="btn small" id="histo-clear" type="button">Vider l’historique</button></div>
+  </section>
+
+  </main>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const TEXT_FIELDS = ["title","location","department","salary_range","company_profile","description","requirements","benefits","employment_type","required_experience","required_education","industry","function"];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2800)}
+
+/* Animation numérique et interpolation */
+function tween(from, to, dur, cb){
+  if (reduce || dur <= 0){ cb(to); return; }
+  const t0 = performance.now();
+  const ease = t => 1 - Math.pow(1 - t, 3);
+  (function frame(now){
+    const p = Math.min(1, (now - t0) / dur);
+    cb(from + (to - from) * ease(p));
+    if (p < 1) requestAnimationFrame(frame);
+  })(t0);
+}
+function countTo(el, to, fmt = v => Math.round(v).toLocaleString("fr-FR"), dur = 800){
+  const from = parseFloat(el.dataset.v || "0");
+  el.dataset.v = to;
+  tween(from, to, dur, v => el.textContent = fmt(v));
+}
+
+/* ---------- Thème ---------- */
+function applyTheme(t){
+  document.documentElement.dataset.theme = t;
+  $("theme").firstElementChild.textContent = t === "dark" ? "Thème sombre" : "Thème clair";
+  try{ localStorage.setItem("trustjob_theme", t); }catch(e){}
+}
+(function(){
+  let t = "dark";
+  try{ t = localStorage.getItem("trustjob_theme") || "dark"; }catch(e){}
+  applyTheme(t);
+})();
+$("theme").addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
+
+/* ---------- Onglets ---------- */
+const TABS = ["analyse","lot","perf","histo"];
+document.querySelectorAll(".nav button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".nav button").forEach(x => x.setAttribute("aria-selected", x === b));
+  TABS.forEach(t => { const s = $("tab-"+t); const show = t === b.dataset.tab; if (show && s.hidden){ s.hidden = false; s.style.animation = "none"; s.offsetHeight; s.style.animation = ""; } else s.hidden = !show; });
+  if (b.dataset.tab === "histo") renderHistory();
+  if (b.dataset.tab === "perf") renderPerf();
+  window.scrollTo({top:0, behavior: reduce ? "auto" : "smooth"});
+}));
+
+/* ---------- API ---------- */
+async function predict(payload){
+  const r = await fetch("/api/predict", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
+  if (!r.ok) throw new Error("Erreur serveur (" + r.status + ")");
+  return r.json();
+}
+let metricsCache = null;
+async function loadMetrics(){
+  try{
+    const r = await fetch("/api/metrics");
+    if (!r.ok) throw 0;
+    metricsCache = await r.json();
+    $("status").innerHTML = '<span class="led on"></span><span>Modèle prêt</span>';
+    const rows = metricsCache.filter(r => r["Modèle"] !== "Règle traditionnelle");
+    const best = rows.sort((a,b) => (b["F1 test interne"]||0) - (a["F1 test interne"]||0))[0];
+    $("t-model").textContent = best ? best["Modèle"] : "Modèle ML";
+  }catch(e){
+    $("status").innerHTML = '<span class="led off"></span><span>Serveur injoignable</span>';
+    $("t-model").textContent = "Hors ligne";
+  }
+}
+
+/* ---------- Historique ---------- */
+const HKEY = "trustjob_history";
+function loadHistory(){ try{ return JSON.parse(localStorage.getItem(HKEY) || "[]"); }catch(e){ return []; } }
+function saveHistory(h){ try{ localStorage.setItem(HKEY, JSON.stringify(h)); }catch(e){} }
+function addHistory(item){ const h = loadHistory(); h.unshift(item); saveHistory(h.slice(0,30)); refreshTiles(); }
+function refreshTiles(){
+  const h = loadHistory();
+  countTo($("t-total"), h.length); countTo($("t-fraud"), h.filter(i => i.pred === 1).length);
+}
+function renderHistory(){
+  const h = loadHistory();
+  $("histo-rows").innerHTML = h.length ? h.map(i =>
+    '<tr><td>' + new Date(i.date).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"}) + '</td><td>' + esc(i.title.slice(0,70)) +
+    '</td><td><span class="tag ' + (i.pred ? "bad" : "ok") + '">' + (i.pred ? "Suspecte" : "Légitime") + '</span></td><td class="num">' + Math.round(i.score) + '</td></tr>'
+  ).join("") : '<tr><td colspan="4" class="hint" style="padding:34px;text-align:center">Aucune analyse pour le moment. Analysez une offre pour la voir apparaître ici.</td></tr>';
+}
+$("histo-clear").addEventListener("click", () => { saveHistory([]); renderHistory(); refreshTiles(); });
+
+/* ---------- Analyse d’une offre ---------- */
+function readForm(){
+  const o = {};
+  TEXT_FIELDS.forEach(f => o[f] = $(f).value.trim());
+  o.telecommuting = $("telecommuting").checked ? 1 : 0;
+  o.has_company_logo = $("has_company_logo").checked ? 1 : 0;
+  o.has_questions = $("has_questions").checked ? 1 : 0;
+  return o;
+}
+const joinText = o => TEXT_FIELDS.map(f => o[f] || "").join(" ").replace(/\s+/g," ").trim();
+
+function extraSignals(o, text){
+  const s = [];
+  if (!o.has_company_logo) s.push(["w","Aucun logo d’entreprise : les fausses offres en ont rarement."]);
+  if (!o.has_questions) s.push(["w","Pas de questions de présélection."]);
+  if (o.description.length > 0 && o.description.length < 300) s.push(["w","Description très courte (" + o.description.length + " caractères)."]);
+  if (/[\w.+-]+@(gmail|yahoo|hotmail|outlook|aol|proton)\.[a-z.]+/i.test(text)) s.push(["w","Adresse e-mail personnelle au lieu d’un e-mail d’entreprise."]);
+  if (/\b(whatsapp|telegram)\b/i.test(text)) s.push(["w","Contact demandé via WhatsApp ou Telegram."]);
+  if (/\b(urgent|immediately|immédiatement|no experience|sans expérience)\b/i.test(text)) s.push(["w","Vocabulaire d’urgence ou promesse « sans expérience »."]);
+  if (/https?:\/\/(bit\.ly|tinyurl|t\.co|goo\.gl)/i.test(text)) s.push(["w","Lien raccourci qui masque la destination."]);
+  if (!s.length) s.push(["g","Aucun indice complémentaire détecté."]);
+  return s;
+}
+function highlight(text, terms){
+  let html = esc(text);
+  terms.forEach(t => { html = html.replace(new RegExp("(" + reEsc(esc(t)) + ")", "gi"), "<mark>$1</mark>"); });
+  return html;
+}
+
+const ICON_BAD = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 17h.01"/></svg>';
+const ICON_OK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 12.500 4 4 8-9"/></svg>';
+
+function showResult(o, text, res){
+  const bad = res.prediction === 1, score = Math.max(0, Math.min(100, res.risk_score));
+  const out = $("out");
+  out.innerHTML =
+    '<div class="gauge ' + (bad ? "bad" : "ok") + '" id="gauge">' +
+      '<svg viewBox="0 0 200 175"><defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--c1)"/><stop offset="1" stop-color="var(--c2)"/></linearGradient></defs>' +
+      '<g transform="rotate(135 100 100)"><circle class="g-track" cx="100" cy="100" r="80" fill="none" stroke-width="14" stroke-linecap="round" pathLength="100" stroke-dasharray="75 100"/>' +
+      '<circle class="glow" id="g-val" cx="100" cy="100" r="80" fill="none" stroke="url(#gg)" stroke-width="14" stroke-linecap="round" pathLength="100" stroke-dasharray="0.01 100"/></g>' +
+      '<line x1="100" y1="6" x2="100" y2="26" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round" opacity=".7"/></svg>' +
+      '<div class="mid"><b id="g-num">0</b><span>indice de risque</span></div>' +
+      '<div class="scale"><span>0</span><span>100</span></div>' +
+    '</div>' +
+    '<div class="verdict ' + (bad ? "bad" : "ok") + '"><div class="vi">' + (bad ? ICON_BAD : ICON_OK) + '</div><div><strong>' + (bad ? "Offre suspecte" : "Aucun signe de fraude") + '</strong><small>' +
+      (bad ? "Le modèle la classe comme probablement frauduleuse." : "Le modèle la classe comme probablement légitime.") + '</small></div></div>' +
+    '<div><div class="sub">Expressions à risque dans le texte</div>' +
+      (res.detected_terms.length ? '<div class="chips">' + res.detected_terms.map((t,i) => '<span class="chip" style="animation-delay:' + (0.5 + i*0.08) + 's">' + esc(t) + '</span>').join("") + '</div>'
+        : '<span class="hint">Aucune expression de la liste de surveillance.</span>') + '</div>' +
+    '<div><div class="sub">Autres indices à vérifier <span class="hint">(hors modèle)</span></div><ul class="signals">' +
+      extraSignals(o, text).map(([k,m]) => '<li><span class="m ' + k + '">' + (k==="w" ? "!" : "✓") + '</span><span>' + esc(m) + '</span></li>').join("") + '</ul></div>' +
+    '<details style="margin:18px 0 0"><summary>Texte analysé</summary><div class="preview">' + highlight(text, res.detected_terms) + '</div></details>' +
+    '<p class="note">Estimation statistique, pas une preuve. Vérifiez l’entreprise sur son site officiel et ne payez jamais de frais pour obtenir un emploi.</p>';
+  out.className = "reveal"; out.hidden = false;
+  const g = $("g-val"), num = $("g-num");
+  tween(0, score, 1400, v => { g.setAttribute("stroke-dasharray", Math.max(0.01, 0.75 * v) + " 100"); num.textContent = Math.round(v); });
+}
+
+const STEPS = ["Lecture du texte de l’annonce…","Extraction des termes significatifs…","Recherche d’expressions à risque…","Calcul de l’indice de risque…"];
+async function runAnalysis(){
+  const o = readForm(), text = joinText(o);
+  if (text.length < 20){ toast("Ajoutez au moins une description du poste."); $("description").focus(); return; }
+  const btn = $("go"); btn.disabled = true; btn.innerHTML = '<i class="spin"></i> Analyse en cours';
+  $("empty").hidden = true; $("out").hidden = true; $("scan").hidden = false;
+  if (window.innerWidth <= 1000) $("result").scrollIntoView({behavior:"smooth", block:"start"});
+  let k = 0; $("steps").textContent = STEPS[0];
+  const timer = setInterval(() => { k = (k + 1) % STEPS.length; $("steps").textContent = STEPS[k]; }, 520);
+  try{
+    const [res] = await Promise.all([
+      predict({text, telecommuting:o.telecommuting, has_company_logo:o.has_company_logo, has_questions:o.has_questions}),
+      sleep(reduce ? 0 : 1500)
+    ]);
+    clearInterval(timer); $("scan").hidden = true;
+    showResult(o, text, res);
+    addHistory({date:new Date().toISOString(), title:o.title || "(sans titre)", pred:res.prediction, score:res.risk_score});
+  }catch(err){
+    clearInterval(timer); $("scan").hidden = true; $("empty").hidden = false;
+    toast("Analyse impossible : " + err.message + ". Le serveur est-il lancé ?");
+  }finally{ btn.disabled = false; btn.innerHTML = 'Analyser l’offre <span class="kbd">Ctrl ↵</span>'; }
+}
+$("form").addEventListener("submit", e => { e.preventDefault(); runAnalysis(); });
+document.addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && !$("tab-analyse").hidden) runAnalysis(); });
+$("clear").addEventListener("click", () => {
+  $("form").reset(); $("has_company_logo").checked = true; $("has_questions").checked = true; updateCount();
+  $("empty").hidden = false; $("out").hidden = true; $("scan").hidden = true;
+});
+function updateCount(){ const n = $("description").value.length; $("count").textContent = n.toLocaleString("fr-FR") + " caractère" + (n > 1 ? "s" : ""); }
+$("description").addEventListener("input", updateCount);
+
+function fill(d){
+  TEXT_FIELDS.forEach(f => $(f).value = d[f] || "");
+  $("telecommuting").checked = !!d.telecommuting;
+  $("has_company_logo").checked = !!d.has_company_logo;
+  $("has_questions").checked = !!d.has_questions;
+  updateCount();
+}
+$("ex-ok").addEventListener("click", () => fill({
+  title:"Software Engineer", location:"US, CA, San Francisco", department:"Engineering",
+  company_profile:"Northwind Analytics builds data tools for retailers. Founded in 2009, we have 250 employees across three offices and a long record of customer success.",
+  description:"We are looking for a Software Engineer to join our platform team. You will design and maintain backend services in Python, review code with teammates and take part in on-call rotations. You will work closely with product managers and data scientists to ship features every two weeks.",
+  requirements:"Bachelor's degree in computer science or equivalent experience. 3+ years of experience with Python and SQL. Good communication skills.",
+  benefits:"Health insurance, 401(k) matching, 25 days of paid leave, learning budget.",
+  employment_type:"Full-time", required_experience:"Mid-Senior level", required_education:"Bachelor's Degree", industry:"Computer Software", function:"Engineering",
+  telecommuting:0, has_company_logo:1, has_questions:1 }));
+$("ex-bad").addEventListener("click", () => fill({
+  title:"Work from home – data entry, no experience", location:"", company_profile:"",
+  description:"Earn $5000 per week working from home. No experience needed, start immediately. To secure your position you must pay a processing fee for the training kit. Send your bank account details and a copy of your passport by email to our recruiter. Payment by western union or wire transfer only.",
+  requirements:"", benefits:"Unlimited income", employment_type:"Other",
+  telecommuting:1, has_company_logo:0, has_questions:0 }));
+
+/* ---------- Performance ---------- */
+const pct = v => (v === "" || v == null || isNaN(v)) ? "–" : (Number(v)*100).toFixed(1).replace(".", ",") + " %";
+function renderPerf(){
+  const body = $("perf-body");
+  if (!metricsCache || !metricsCache.length){
+    body.innerHTML = '<div class="card empty">Aucune métrique disponible. Vérifiez que <b>outputs/comparaison_modeles_trustjob.csv</b> existe.</div>'; return;
+  }
+  const rows = [...metricsCache].sort((a,b) => (b["F1 test interne"]||0) - (a["F1 test interne"]||0));
+  const best = rows.find(r => r["Modèle"] !== "Règle traditionnelle") || rows[0];
+  const rule = rows.find(r => r["Modèle"] === "Règle traditionnelle");
+  const gain = rule ? ((best["F1 test interne"] - rule["F1 test interne"]) * 100) : null;
+  const M = [["Accuracy","Accuracy"],["Précision","Précision"],["Rappel (fraudes)","Rappel"],["F1 (fraude)","F1 test interne"]];
+  body.innerHTML =
+    '<div class="bento">' +
+      '<div class="kpi hero"><b style="font-size:21px;line-height:1.3">' + esc(best["Modèle"]) + '</b><span>modèle retenu</span></div>' +
+      '<div class="kpi"><b data-count="' + best["F1 test interne"] + '">0 %</b><span>F1 sur la classe frauduleuse</span></div>' +
+      '<div class="kpi"><b data-count="' + best["Rappel"] + '">0 %</b><span>des fraudes détectées (rappel)</span></div>' +
+      '<div class="kpi"><b>' + (gain != null ? "+" + gain.toFixed(0) + " pts" : "–") + '</b><span>de F1 face à la règle à mots-clés</span></div>' +
+    '</div>' +
+    '<div class="models">' + rows.map(r => {
+      const isRule = r["Modèle"] === "Règle traditionnelle";
+      return '<article class="model' + (r === best ? " best" : "") + (isRule ? " rule" : "") + '"><header><h3>' + esc(r["Modèle"]) + '</h3>' + (r === best ? '<span class="badge">Retenu</span>' : "") + '</header>' +
+        M.map(([l,k]) => '<div class="metric"><span>' + l + '</span><div class="track"><div class="fill" data-w="' + ((r[k]||0)*100) + '"></div></div><b>' + pct(r[k]) + '</b></div>').join("") +
+        '<div class="cv"><span>F1 validation croisée</span><b>' + pct(r["F1 CV (4 plis)"]) + '</b></div></article>';
+    }).join("") + '</div>' +
+    '<p class="hint" style="margin-top:18px;max-width:75ch"><strong>Lecture pour la détection de fraude :</strong> privilégier le <strong>rappel</strong> (part des fraudes détectées) et le <strong>F1</strong> de la classe frauduleuse ; l’accuracy seule est trompeuse quand les fraudes sont rares. Un <strong>faux négatif</strong> (fraude manquée) est en général plus coûteux qu’un <strong>faux positif</strong> (fausse alerte).</p>';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    body.querySelectorAll(".fill").forEach(f => f.style.width = f.dataset.w + "%");
+    body.querySelectorAll("[data-count]").forEach(el => { const to = parseFloat(el.dataset.count) * 100; tween(0, to, 1100, v => el.textContent = v.toFixed(1).replace(".", ",") + " %"); });
+  }));
+}
+
+/* ---------- Lot CSV ---------- */
+function parseCSV(text){
+  const rows = []; let row = [], cur = "", q = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (q){ if (c === '"'){ if (text[i+1] === '"'){ cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === ","){ row.push(cur); cur = ""; }
+    else if (c === "\n" || c === "\r"){
+      if (c === "\r" && text[i+1] === "\n") i++;
+      row.push(cur); cur = ""; if (row.length > 1 || row[0] !== "") rows.push(row); row = [];
+    } else cur += c;
+  }
+  if (cur !== "" || row.length){ row.push(cur); rows.push(row); }
+  return rows;
+}
+const csvCell = v => { v = String(v ?? ""); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; };
+function download(name, content){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["\ufeff" + content], {type:"text/csv;charset=utf-8"}));
+  a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+let results = [], stopFlag = false, running = false;
+const SHOW_MAX = 300;
+function renderBatch(){
+  const total = results.length, fraud = results.filter(r => r.pred === 1).length, rate = total ? fraud/total*100 : 0;
+  $("k-total").textContent = total.toLocaleString("fr-FR");
+  $("k-fraud").textContent = fraud.toLocaleString("fr-FR");
+  $("k-ok").textContent = (total - fraud).toLocaleString("fr-FR");
+  $("k-rate").textContent = rate.toFixed(1).replace(".", ",") + " %";
+  $("d-val").style.strokeDasharray = (fraud ? Math.max(rate, 0.8) : 0) + " 100";
+  const f = $("filter").value;
+  const list = results.filter(r => f === "all" || String(r.pred) === f);
+  $("rows").innerHTML = list.slice(0, SHOW_MAX).map(r =>
+    '<tr><td>' + esc(r.id) + '</td><td>' + esc(r.title.slice(0,60)) + '</td><td><span class="tag ' + (r.pred ? "bad" : "ok") + '">' + (r.pred ? "Suspecte" : "Légitime") +
+    '</span></td><td class="num">' + Math.round(r.score) + '</td><td>' + esc(r.terms.join(", ") || "–") + '</td></tr>').join("");
+  $("more").textContent = list.length > SHOW_MAX ? "Affichage des " + SHOW_MAX + " premières lignes sur " + list.length.toLocaleString("fr-FR") + ". L’export contient toutes les lignes." : "";
+}
+$("filter").addEventListener("change", renderBatch);
+
+async function runBatch(file){
+  if (running) return;
+  const rows = parseCSV(await file.text());
+  if (rows.length < 2){ toast("Le fichier est vide ou illisible."); return; }
+  const head = rows[0].map(h => h.trim()), idx = {};
+  head.forEach((h,i) => idx[h] = i);
+  if (!("description" in idx) && !("title" in idx)){ toast("Colonnes introuvables : « title » et « description » sont nécessaires."); return; }
+  const items = rows.slice(1).map((r, n) => {
+    const o = {}; TEXT_FIELDS.forEach(f => o[f] = idx[f] != null ? (r[idx[f]] || "") : "");
+    const flag = (name, def) => { const v = idx[name] != null ? parseInt(r[idx[name]], 10) : def; return isNaN(v) ? def : v; };
+    return {id: idx.id != null ? r[idx.id] : (idx.job_id != null ? r[idx.job_id] : n+1), title:o.title,
+      payload:{text:joinText(o), telecommuting:flag("telecommuting",0), has_company_logo:flag("has_company_logo",1), has_questions:flag("has_questions",1)}};
+  });
+  results = []; stopFlag = false; running = true;
+  $("batch").hidden = false; $("dl-sub").disabled = $("dl-full").disabled = true; $("stop").disabled = false;
+  $("pbar").classList.add("run");
+  let next = 0, done = 0; const t0 = performance.now();
+  async function worker(){
+    while (!stopFlag){
+      const i = next++; if (i >= items.length) return;
+      try{
+        const r = await predict(items[i].payload);
+        results[i] = {id:items[i].id, title:items[i].title, pred:r.prediction, score:r.risk_score, terms:r.detected_terms};
+      }catch(e){ results[i] = {id:items[i].id, title:items[i].title, pred:0, score:0, terms:["erreur"]}; }
+      done++;
+      if (done % 25 === 0 || done === items.length){
+        $("pbar").style.width = (done/items.length*100) + "%";
+        const sec = (performance.now()-t0)/1000, eta = Math.max(0, Math.round(sec/done*(items.length-done)));
+        $("ptext").textContent = done.toLocaleString("fr-FR") + " / " + items.length.toLocaleString("fr-FR") + " offres analysées" + (done < items.length ? " · environ " + eta + " s restantes" : " · terminé");
+        results = results.filter(Boolean); renderBatch();
+      }
+    }
+  }
+  await Promise.all(Array.from({length:6}, worker));
+  results = results.filter(Boolean); running = false;
+  $("pbar").classList.remove("run"); renderBatch();
+  $("dl-sub").disabled = $("dl-full").disabled = !results.length; $("stop").disabled = true;
+  if (stopFlag) $("ptext").textContent = "Analyse arrêtée : " + results.length + " offres traitées.";
+  else toast("Analyse terminée : " + results.length.toLocaleString("fr-FR") + " offres traitées.");
+}
+$("stop").addEventListener("click", () => { stopFlag = true; });
+$("dl-sub").addEventListener("click", () => download("job_postings_submission.csv", "id,fraudulent\r\n" + results.map(r => r.id + "," + r.pred).join("\r\n")));
+$("dl-full").addEventListener("click", () => download("trustjob_resultats.csv",
+  "id,title,verdict,risk_score,detected_terms\r\n" +
+  results.map(r => [r.id, r.title, r.pred ? "FRAUDULENT" : "LEGITIMATE", r.score, r.terms.join("; ")].map(csvCell).join(",")).join("\r\n")));
+
+const drop = $("drop"), fileIn = $("file");
+drop.addEventListener("click", () => fileIn.click());
+drop.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); fileIn.click(); } });
+fileIn.addEventListener("change", () => fileIn.files[0] && runBatch(fileIn.files[0]));
+["dragover","dragenter"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => e.dataTransfer.files[0] && runBatch(e.dataTransfer.files[0]));
+
+refreshTiles();
+loadMetrics();
+</script>
+</body>
+</html>
